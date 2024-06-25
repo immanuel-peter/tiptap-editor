@@ -22,6 +22,7 @@ import Superscript from "@tiptap/extension-superscript";
 import Link from "@tiptap/extension-link";
 import TiptapImage from "@tiptap/extension-image";
 import Typography from "@tiptap/extension-typography";
+import Placeholder from "@tiptap/extension-placeholder";
 
 import { Tooltip, Input, Button, Divider } from "antd";
 
@@ -89,11 +90,322 @@ const Tiptap = () => {
       allowBase64: true,
     }),
     Typography,
+    //     Placeholder.configure({
+    //       placeholder: `If you want to highlight a code block, it is best to type surround your code with \`\`\`. Follow the first set with the language (or associated abbreviation) in order to highlight keywords. For example:
+
+    // \`\`\`python
+    // if n < 10:
+    //   return 10
+    // else:
+    //   return n
+    // \`\`\`
+    //       `,
+    //     }),
   ];
 
   const editor = useEditor({
     extensions: tiptapExtensions,
-    content: { "type": "doc", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "You can streamline your process and potentially improve performance by using the following steps:" } ] }, { "type": "orderedList", "attrs": { "start": 1 }, "content": [ { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "Chunking the Corpus: Instead of splitting the entire corpus into individual sentences, which can be computationally expensive, consider breaking it into larger chunks, such as paragraphs or a few sentences combined. This reduces the number of comparisons while still maintaining context." } ] } ] }, { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "Efficient Similarity Computation: Use util.pytorch_cos_sim instead of util.cos_sim for faster computation." } ] } ] }, { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "Batch Processing: Process your phrases and corpus chunks in batches to take advantage of parallel processing." } ] } ] }, { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "Thresholding: Only consider top-N matches based on a similarity threshold to reduce the number of comparisons further." } ] } ] } ] }, { "type": "paragraph", "content": [ { "type": "text", "text": "Here's a modified version of your code that incorporates these suggestions:" } ] }, { "type": "codeBlock", "attrs": { "language": "python" }, "content": [ { "type": "text", "text": "from sentence_transformers import SentenceTransformer, util\nimport pandas as pd\n\n# Define your phrases and corpus\nphrase_list = ['Gregor Samsa', 'in his bed into', 'horrible creature'] # Example\nvery_long_string = 'One morning, when Gregor Samsa woke from troubled dreams, he found himself transformed in his bed into a horrible vermin. He lay on his armour-like back, and if he lifted his head a little he could see his brown belly, slightly domed and divided by arches into stiff sections. The bedding was hardly able to cover it and seemed ready to slide off any moment. His many legs, pitifully thin compared with the size of the rest of him, waved about helplessly as he looked...' # Example\n\n# Convert the long string into a list of chunks (e.g., paragraphs)\nstring_to_chunk_list = very_long_string.split(\"\") # Or another chunking method\n\n# Load the model\nmodel = SentenceTransformer('all-mpnet-base-v2')\n\n# Encode phrases and chunks\nphrase_embeddings = model.encode(phrase_list, convert_to_tensor=True)\nchunk_embeddings = model.encode(string_to_chunk_list, convert_to_tensor=True)\n\n# Initialize the similarity dictionary\nsimilarity_dict = {}\n\n# Compute similarities and find matches\nfor i, phrase in enumerate(phrase_list):\n similarities = util.pytorch_cos_sim(phrase_embeddings[i], chunk_embeddings)\n matches = [string_to_chunk_list[j] for j, sim in enumerate(similarities[0]) if sim > 0.65] # Adjust threshold as needed\n similarity_dict[phrase] = matches\n\n# Save the results to a CSV file\nsimilarity_df = pd.DataFrame(list(similarity_dict.items()), columns=['Phrase', 'Matches'])\nsimilarity_df.to_csv('similarity_dict.csv', index=False)\n\nprint(similarity_dict)" } ] }, { "type": "heading", "attrs": { "level": 3 }, "content": [ { "type": "text", "text": "Additional Tips:" } ] }, { "type": "bulletList", "content": [ { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "Adjust the Chunk Size: Experiment with different chunk sizes to find a balance between context retention and computational efficiency." } ] } ] }, { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "Similarity Threshold: Adjust the similarity threshold (0.65 in the example) based on your specific needs for precision and recall." } ] } ] }, { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "Parallel Processing: If your setup supports it, consider using parallel processing libraries such as multiprocessing to further speed up the computation." } ] } ] } ] }, { "type": "heading", "attrs": { "level": 3 }, "content": [ { "type": "text", "text": "Handling Redundant Matches:" } ] }, { "type": "paragraph", "content": [ { "type": "text", "text": "To address the concern about redundant matches within the same sentence, you can:" } ] }, { "type": "bulletList", "content": [ { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "Deduplicate Matches: Use a set to store matches and ensure uniqueness." } ] } ] }, { "type": "listItem", "content": [ { "type": "paragraph", "content": [ { "type": "text", "text": "Fine-tune Matching Logic: Apply additional logic to filter out sub-phrases from the same sentence if they are not required." } ] } ] } ] }, { "type": "paragraph", "content": [ { "type": "text", "text": "By implementing these optimizations, you should be able to improve both the efficiency and accuracy of your phrase-matching process within a large corpus." } ] } ] }
+    content: {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "To achieve efficient phrase matching within a large corpus using SBERT and the ",
+            },
+            {
+              type: "text",
+              marks: [{ type: "code" }],
+              text: "sentence-transformers",
+            },
+            {
+              type: "text",
+              text: " library, you can take a slightly different approach that avoids splitting the corpus into individual sentences, which is computationally expensive. Instead, you can leverage sliding windows to capture more context and reduce the number of comparisons.",
+            },
+          ],
+        },
+        { type: "paragraph" },
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Here's an alternative method using sliding windows:",
+            },
+          ],
+        },
+        {
+          type: "orderedList",
+          attrs: { start: 1 },
+          content: [
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      marks: [{ type: "bold" }],
+                      text: "Sliding Window Approach:",
+                    },
+                    {
+                      type: "text",
+                      text: " Instead of splitting the text into sentences or chunks, create overlapping windows of text. This way, you can maintain context and reduce the number of segments to compare.",
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      marks: [{ type: "bold" }],
+                      text: "SBERT Embeddings:",
+                    },
+                    {
+                      type: "text",
+                      text: " Use SBERT to encode the phrases and windows, then compute the cosine similarity to find matches.",
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      marks: [{ type: "bold" }],
+                      text: "Optimized Comparison:",
+                    },
+                    {
+                      type: "text",
+                      text: " Use efficient data structures to store and retrieve matches.",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        { type: "paragraph" },
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "Here’s a sample implementation:" }],
+        },
+        {
+          type: "codeBlock",
+          attrs: { language: null },
+          content: [
+            {
+              type: "text",
+              text: "from sentence_transformers import SentenceTransformer, util\nimport pandas as pd\n\n# Define your phrases and corpus\nphrase_list = ['Gregor Samsa', 'in his bed into', 'horrible creature'] # Example\nvery_long_string = 'One morning, when Gregor Samsa woke from troubled dreams, he found himself transformed in his bed into a horrible vermin. He lay on his armour-like back, and if he lifted his head a little he could see his brown belly, slightly domed and divided by arches into stiff sections. The bedding was hardly able to cover it and seemed ready to slide off any moment. His many legs, pitifully thin compared with the size of the rest of him, waved about helplessly as he looked...' # Example\n\n# Create sliding windows of text\nwindow_size = 50 # Adjust window size based on context needs\nstep_size = 25 # Overlap between windows\nwindows = [very_long_string[i:i+window_size] for i in range(0, len(very_long_string), step_size)]\n\n# Load the model\nmodel = SentenceTransformer('all-mpnet-base-v2')\n\n# Encode phrases and windows\nphrase_embeddings = model.encode(phrase_list, convert_to_tensor=True)\nwindow_embeddings = model.encode(windows, convert_to_tensor=True)\n\n# Initialize the similarity dictionary\nsimilarity_dict = {}\n\n# Compute similarities and find matches\nfor i, phrase in enumerate(phrase_list):\n similarities = util.pytorch_cos_sim(phrase_embeddings[i], window_embeddings)\n matches = [windows[j] for j, sim in enumerate(similarities[0]) if sim > 0.65] # Adjust threshold as needed\n similarity_dict[phrase] = matches\n\n# Save the results to a CSV file\nsimilarity_df = pd.DataFrame(list(similarity_dict.items()), columns=['Phrase', 'Matches'])\nsimilarity_df.to_csv('similarity_dict.csv', index=False)\n\nprint(similarity_dict)",
+            },
+          ],
+        },
+        { type: "paragraph" },
+        {
+          type: "heading",
+          attrs: { level: 3 },
+          content: [
+            { type: "text", text: "Benefits of the Sliding Window Approach:" },
+          ],
+        },
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      marks: [{ type: "bold" }],
+                      text: "Context Preservation:",
+                    },
+                    {
+                      type: "text",
+                      text: " Maintains more context than sentence splitting.",
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      marks: [{ type: "bold" }],
+                      text: "Reduced Comparisons:",
+                    },
+                    {
+                      type: "text",
+                      text: " Fewer segments to compare, reducing computation time.",
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      marks: [{ type: "bold" }],
+                      text: "Flexibility:",
+                    },
+                    {
+                      type: "text",
+                      text: " Adjustable window and step sizes allow for fine-tuning based on corpus characteristics.",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: "heading",
+          attrs: { level: 3 },
+          content: [{ type: "text", text: "Additional Optimizations:" }],
+        },
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      marks: [{ type: "bold" }],
+                      text: "Batch Processing:",
+                    },
+                    {
+                      type: "text",
+                      text: " Process windows and phrases in batches to leverage parallel processing.",
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      marks: [{ type: "bold" }],
+                      text: "Threshold Adjustment:",
+                    },
+                    {
+                      type: "text",
+                      text: " Tune the similarity threshold based on your specific use case to balance precision and recall.",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: "heading",
+          attrs: { level: 3 },
+          content: [{ type: "text", text: "Potential Extensions:" }],
+        },
+        {
+          type: "bulletList",
+          content: [
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      marks: [{ type: "bold" }],
+                      text: "Contextual Filtering:",
+                    },
+                    {
+                      type: "text",
+                      text: " Post-process the matches to filter out redundant or less relevant matches.",
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: "listItem",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      marks: [{ type: "bold" }],
+                      text: "Parallelization:",
+                    },
+                    { type: "text", text: " Use libraries like " },
+                    {
+                      type: "text",
+                      marks: [{ type: "code" }],
+                      text: "multiprocessing",
+                    },
+                    { type: "text", text: " or " },
+                    { type: "text", marks: [{ type: "code" }], text: "joblib" },
+                    {
+                      type: "text",
+                      text: " to parallelize the embedding and comparison steps for further speed-up.",
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        { type: "paragraph" },
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "By implementing these strategies, you can achieve efficient and accurate phrase matching within a large corpus using SBERT and ",
+            },
+            {
+              type: "text",
+              marks: [{ type: "code" }],
+              text: "sentence-transformers",
+            },
+            { type: "text", text: "." },
+          ],
+        },
+      ],
+    },
   });
 
   if (!editor) {
@@ -104,7 +416,7 @@ const Tiptap = () => {
     editorProps: {
       attributes: {
         class:
-          "w-full max-w-5xl min-h-64 p-2 text-sm border-2 border-solid border-black rounded-b-md",
+          "w-full max-w-2xl h-64 overflow-y-auto p-2 text-sm border-2 border-solid border-black rounded-b-md",
       },
     },
   });
@@ -418,233 +730,251 @@ const Tiptap = () => {
     editor.chain().focus().toggleBlockquote().run();
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-2xl">
       <h1 className="font-bold mb-4 text-blue-600">Tiptap Editor</h1>
       <div className="w-fit items-center justify-center">
-        <div className="flex flex-row items-center justify-start">
-          <div
-            onClick={handleBoldClick}
-            className={`p-1 border-b-0 border-t-2 border-l-2 border border-solid border-black rounded-tl-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("bold") ? "text-blue-700 bg-blue-200" : null
-            }`}
-          >
-            <AiOutlineBold />
-          </div>
-          <div
-            onClick={handleItalicClick}
-            className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("italic") ? "text-blue-700 bg-blue-200" : null
-            }`}
-          >
-            <AiOutlineItalic />
-          </div>
-          <div
-            onClick={handleUnderlineClick}
-            className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("underline") ? "text-blue-700 bg-blue-200" : null
-            }`}
-          >
-            <AiOutlineUnderline />
-          </div>
-          <div
-            onClick={handleStrikethroughClick}
-            className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("strike") ? "text-blue-700 bg-blue-200" : null
-            }`}
-          >
-            <AiOutlineStrikethrough />
-          </div>
-          <div
-            onClick={handleClearFormatting}
-            className="p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer"
-          >
-            <TbClearFormatting />
-          </div>
-          <Tooltip
-            title={() => <HighlightInput />}
-            placement="bottom"
-            color="#cbd5e1"
-            trigger="click"
-          >
+        <div className="flex flex-row items-center justify-between">
+          <div className="flex flex-row items-center justify-start">
             <div
+              onClick={handleBoldClick}
+              className={`p-1 border-b-0 border-t-2 border-l-2 border border-solid border-black rounded-tl-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("bold") ? "text-blue-700 bg-blue-200" : null
+              }`}
+            >
+              <AiOutlineBold />
+            </div>
+            <div
+              onClick={handleItalicClick}
               className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-                editor.isActive("highlight")
+                editor.isActive("italic") ? "text-blue-700 bg-blue-200" : null
+              }`}
+            >
+              <AiOutlineItalic />
+            </div>
+            <div
+              onClick={handleUnderlineClick}
+              className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("underline")
                   ? "text-blue-700 bg-blue-200"
                   : null
               }`}
             >
-              <AiOutlineHighlight />
+              <AiOutlineUnderline />
             </div>
-          </Tooltip>
-          <Tooltip
-            title={() => <ColorInput />}
-            placement="bottom"
-            color="#cbd5e1"
-            trigger="click"
-          >
             <div
-              onClick={() => {}}
+              onClick={handleStrikethroughClick}
               className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-                editor.isActive("color") ? "text-blue-700 bg-blue-200" : null
+                editor.isActive("strike") ? "text-blue-700 bg-blue-200" : null
               }`}
             >
-              <IoColorPalette />
+              <AiOutlineStrikethrough />
             </div>
-          </Tooltip>
-          <div
-            onClick={handleCodeClick}
-            className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("code") ? "text-blue-700 bg-blue-200" : null
-            }`}
-          >
-            <FaCode />
-          </div>
-          <div
-            onClick={handleCodeblockClick}
-            className={`p-1 border-b-0 border-t-2 border-r-2 border border-solid border-black rounded-tr-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("codeBlock") ? "text-blue-700 bg-blue-200" : null
-            }`}
-          >
-            <FaFileCode />
-          </div>
-
-          <div
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 1 }).run()
-            }
-            className={`ml-2 p-1 border-b-0 border-t-2 border-l-2 border border-solid border-black rounded-tl-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("heading", { level: 1 })
-                ? "text-blue-700 bg-blue-200"
-                : null
-            }`}
-          >
-            <LuHeading1 />
-          </div>
-          <div
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 2 }).run()
-            }
-            className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("heading", { level: 2 })
-                ? "text-blue-700 bg-blue-200"
-                : null
-            }`}
-          >
-            <LuHeading2 />
-          </div>
-          <div
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 3 }).run()
-            }
-            className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("heading", { level: 3 })
-                ? "text-blue-700 bg-blue-200"
-                : null
-            }`}
-          >
-            <LuHeading3 />
-          </div>
-          <div
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 4 }).run()
-            }
-            className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("heading", { level: 4 })
-                ? "text-blue-700 bg-blue-200"
-                : null
-            }`}
-          >
-            <LuHeading4 />
-          </div>
-          <div
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 5 }).run()
-            }
-            className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("heading", { level: 5 })
-                ? "text-blue-700 bg-blue-200"
-                : null
-            }`}
-          >
-            <LuHeading5 />
-          </div>
-          <div
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 6 }).run()
-            }
-            className={`p-1 border-b-0 border-t-2 border-r-2 border border-solid border-black rounded-tr-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("heading", { level: 6 })
-                ? "text-blue-700 bg-blue-200"
-                : null
-            }`}
-          >
-            <LuHeading6 />
-          </div>
-
-          <div
-            onClick={handleBlockquoteClick}
-            className={`ml-2 p-1 border-b-0 border-t-2 border-l-2 border border-solid border-black rounded-tl-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("blockquote") ? "text-blue-700 bg-blue-200" : null
-            }`}
-          >
-            <TbBlockquote />
-          </div>
-          <div
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("bulletList") ? "text-blue-700 bg-blue-200" : null
-            }`}
-          >
-            <HiOutlineListBullet />
-          </div>
-          <div
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("orderedList")
-                ? "text-blue-700 bg-blue-200"
-                : null
-            }`}
-          >
-            <GoListOrdered />
-          </div>
-          <div
-            onClick={() => editor.chain().focus().toggleSubscript().run()}
-            className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("subscript") ? "text-blue-700 bg-blue-200" : null
-            }`}
-          >
-            <TbSubscript />
-          </div>
-          <div
-            onClick={() => editor.chain().focus().toggleSuperscript().run()}
-            className={`p-1 border-b-0 border-t-2 border-r-2 border border-solid border-black rounded-tr-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-              editor.isActive("superscript")
-                ? "text-blue-700 bg-blue-200"
-                : null
-            }`}
-          >
-            <TbSuperscript />
-          </div>
-
-          <Tooltip
-            title={() => <LinkInput />}
-            placement="bottom"
-            color="#cbd5e1"
-            trigger="click"
-          >
             <div
-              className={`ml-2 p-1 border-b-0 border-t-2 border-l-2 border border-solid border-black rounded-tl-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
-                editor.isActive("link") ? "text-blue-700 bg-blue-200" : null
+              onClick={handleClearFormatting}
+              className="p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer"
+            >
+              <TbClearFormatting />
+            </div>
+            <Tooltip
+              title={() => <HighlightInput />}
+              placement="bottom"
+              color="#cbd5e1"
+              trigger="click"
+            >
+              <div
+                className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                  editor.isActive("highlight")
+                    ? "text-blue-700 bg-blue-200"
+                    : null
+                }`}
+              >
+                <AiOutlineHighlight />
+              </div>
+            </Tooltip>
+            <Tooltip
+              title={() => <ColorInput />}
+              placement="bottom"
+              color="#cbd5e1"
+              trigger="click"
+            >
+              <div
+                onClick={() => {}}
+                className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                  editor.isActive("color") ? "text-blue-700 bg-blue-200" : null
+                }`}
+              >
+                <IoColorPalette />
+              </div>
+            </Tooltip>
+            <div
+              onClick={handleCodeClick}
+              className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("code") ? "text-blue-700 bg-blue-200" : null
               }`}
             >
-              <FaLink />
+              <FaCode />
             </div>
-          </Tooltip>
-          <div
-            onClick={() => editor.chain().focus().unsetLink().run()}
-            className="p-1 border-b-0 border-t-2 border-r-2 border border-solid border-black rounded-tr-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer"
-          >
-            <FaLinkSlash />
+            <div
+              onClick={handleCodeblockClick}
+              className={`p-1 border-b-0 border-t-2 border-r-2 border border-solid border-black rounded-tr-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("codeBlock")
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <FaFileCode />
+            </div>
+          </div>
+
+          <div className="flex flex-row items-center justify-start">
+            <div
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 1 }).run()
+              }
+              className={`ml-2 p-1 border-b-0 border-t-2 border-l-2 border border-solid border-black rounded-tl-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("heading", { level: 1 })
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <LuHeading1 />
+            </div>
+            <div
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 2 }).run()
+              }
+              className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("heading", { level: 2 })
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <LuHeading2 />
+            </div>
+            <div
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 3 }).run()
+              }
+              className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("heading", { level: 3 })
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <LuHeading3 />
+            </div>
+            <div
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 4 }).run()
+              }
+              className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("heading", { level: 4 })
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <LuHeading4 />
+            </div>
+            <div
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 5 }).run()
+              }
+              className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("heading", { level: 5 })
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <LuHeading5 />
+            </div>
+            <div
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 6 }).run()
+              }
+              className={`p-1 border-b-0 border-t-2 border-r-2 border border-solid border-black rounded-tr-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("heading", { level: 6 })
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <LuHeading6 />
+            </div>
+          </div>
+
+          <div className="flex flex-row items-center justify-start">
+            <div
+              onClick={handleBlockquoteClick}
+              className={`ml-2 p-1 border-b-0 border-t-2 border-l-2 border border-solid border-black rounded-tl-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("blockquote")
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <TbBlockquote />
+            </div>
+            <div
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+              className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("bulletList")
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <HiOutlineListBullet />
+            </div>
+            <div
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("orderedList")
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <GoListOrdered />
+            </div>
+            <div
+              onClick={() => editor.chain().focus().toggleSubscript().run()}
+              className={`p-1 border-b-0 border-t-2 border border-solid border-black hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("subscript")
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <TbSubscript />
+            </div>
+            <div
+              onClick={() => editor.chain().focus().toggleSuperscript().run()}
+              className={`p-1 border-b-0 border-t-2 border-r-2 border border-solid border-black rounded-tr-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                editor.isActive("superscript")
+                  ? "text-blue-700 bg-blue-200"
+                  : null
+              }`}
+            >
+              <TbSuperscript />
+            </div>
+          </div>
+
+          <div className="flex flex-row items-center justify-start">
+            <Tooltip
+              title={() => <LinkInput />}
+              placement="bottom"
+              color="#cbd5e1"
+              trigger="click"
+            >
+              <div
+                className={`ml-2 p-1 border-b-0 border-t-2 border-l-2 border border-solid border-black rounded-tl-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer ${
+                  editor.isActive("link") ? "text-blue-700 bg-blue-200" : null
+                }`}
+              >
+                <FaLink />
+              </div>
+            </Tooltip>
+            <div
+              onClick={() => editor.chain().focus().unsetLink().run()}
+              className="p-1 border-b-0 border-t-2 border-r-2 border border-solid border-black rounded-tr-md hover:text-blue-700 hover:bg-blue-200 cursor-pointer"
+            >
+              <FaLinkSlash />
+            </div>
           </div>
 
           <Tooltip
@@ -658,17 +988,15 @@ const Tiptap = () => {
             </div>
           </Tooltip>
         </div>
-        <EditorContent editor={editor} />
+        <EditorContent editor={editor} className="min-h-full min-w-full" />
       </div>
-      <div className="mt-10 flex items-center justify-center">
+      {/* <div className="mt-10 flex items-center justify-center">
         {JSON.stringify(
           generateJSON(editor.getHTML(), tiptapExtensions),
           null,
           2
         )}
-        {/* {editor.getHTML()} */}
-        {/* {editor.getText()} */}
-      </div>
+      </div> */}
     </div>
   );
 };

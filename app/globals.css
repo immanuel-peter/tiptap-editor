@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-}
-
 .tiptap h1 {
   @apply text-2xl font-bold;
 }
@@ -55,6 +52,20 @@
 
 .tiptap code {
   @apply bg-slate-300 rounded-md text-black text-sm p-1;
+}
+
+@layer components {
+  .tiptap {
+    @apply first:mt-0;
+
+    p.is-editor-empty:first-child::before {
+      @apply text-gray-400 content-[attr(data-placeholder)] float-left h-0 pointer-events-none;
+    }
+
+    p.is-empty::before {
+      @apply text-gray-400 content-[attr(data-placeholder)] float-left h-0 pointer-events-none;
+    }
+  }
 }
 
 @layer components {
